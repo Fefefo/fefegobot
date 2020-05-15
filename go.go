@@ -300,7 +300,7 @@ func main() {
 					array = append(array, articolo)
 				}
 			} else if splittedText[0] == "film" && len(splittedText) >= 2 {
-				ricerca := url.QueryEscape(strings.Join(splittedText[1:len(splittedText)-1], " "))
+				ricerca := url.QueryEscape(strings.Join(splittedText[1:], " "))
 				url := "https://api.themoviedb.org/3/search/movie?api_key=" + filmapi + "&language=it&query=" + ricerca + "&page=1&include_adult=true"
 
 				resp, _ := http.Get(url)
@@ -324,7 +324,7 @@ func main() {
 				}
 
 			} else if splittedText[0] == "math" && len(splittedText) >= 2 {
-				formula := strings.Join(splittedText[1:len(splittedText)-1], " ")
+				formula := strings.Join(splittedText[1:], " ")
 				if formula != "" {
 					sol := solver(formula)
 					articolo := tgbotapi.NewInlineQueryResultArticleHTML("soluzione", "Risolvi", sol)
@@ -347,7 +347,7 @@ func main() {
 					array = append(array, articolo)
 				}
 			} else if splittedText[0] == "theme" && len(splittedText) >= 2 {
-				query := strings.Join(splittedText[1:len(splittedText)-1], " ")
+				query := strings.Join(splittedText[1:], " ")
 				if len(query) == 5 {
 					biArray := scraper(query)
 
@@ -369,9 +369,14 @@ func main() {
 					UserID: update.InlineQuery.From.ID,
 				}
 				foto, _ := bot.GetUserProfilePhotos(conf)
-
-				for i := 0; i < len(foto.Photos); i++ {
-					if i < 50 {
+				page := 0;
+				if len(splittedText) == 2 {
+					if num, err := strconv.Atoi(splittedText[1]); err == nil && int(len(foto.Photos)/50) > (num-1){
+						page = num - 1
+					}
+				}
+				for i := page*50; i < len(foto.Photos); i++ {
+					if i < (page+1)*50 {
 						a := tgbotapi.NewInlineQueryResultPhotoWithThumb("pic"+strconv.Itoa(i), foto.Photos[i][2].FileID, foto.Photos[i][2].FileID)
 						a.Caption = "La tua pic numero " + strconv.Itoa(i+1)
 						array = append(array, a)
