@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Fefefo/moeScraper/scraper"
+
 	"github.com/Knetic/govaluate"
-	"github.com/PuerkitoBio/goquery"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/gocolly/colly"
 	"gopkg.in/ini.v1"
 )
 
@@ -31,14 +31,14 @@ import (
 	} `json:"meaning,omitempty"`
 }*/
 
-type Dict struct {
+type dict struct {
 	Word     string                  `json:"word,omitempty"`
 	Phonetic string                  `json:"phonetic,omitempty"`
 	Origin   string                  `json:"origin,omitempty"`
-	Meaning  map[string][]Definition `json:"meaning,omitempty"`
+	Meaning  map[string][]definition `json:"meaning,omitempty"`
 }
 
-type Definition struct {
+type definition struct {
 	Definition string   `json:"definition,omitempty"`
 	Example    string   `json:"example,omitempty"`
 	Synonyms   []string `json:"synonym,omitempty"`
@@ -129,51 +129,6 @@ func solver(mate string) string {
 	}
 }
 
-func scraper(query string) [][3]string {
-	c := colly.NewCollector()
-	d := colly.NewCollector()
-
-	var megainfo [][3]string
-	c.OnHTML(".md.wiki p a", func(e *colly.HTMLElement) {
-		if strings.Contains(strings.ToUpper(e.DOM.Text()), strings.ToUpper(query)) {
-			uf, _ := e.DOM.Attr("href")
-			d.Visit("https://old.reddit.com" + strings.Split(uf, "#")[0])
-		}
-	})
-
-	d.OnHTML(".md.wiki h3", func(e *colly.HTMLElement) {
-		if strings.Contains(strings.ToUpper(e.DOM.Text()), strings.ToUpper(query)) {
-			var info [][3]string
-			var tabella *goquery.Selection
-			if e.DOM.Next().Is("table") {
-				tabella = e.DOM.Next()
-			} else {
-				tabella = e.DOM.Next().Next()
-			}
-			titolo := ""
-			for i := 0; i < tabella.Find("a").Length(); i++ {
-				var temp [3]string
-				tdLink := tabella.Find("a").Eq(i)
-				title := tabella.Find("a").Eq(i).Parent().Prev().Text()
-				link, _ := tdLink.Attr("href")
-				if title != "" {
-					titolo = title
-				}
-				temp[0] = titolo
-				temp[1] = tdLink.Text()
-				temp[2] = link
-
-				info = append(info, temp)
-			}
-			megainfo = append(megainfo, info...)
-		}
-	})
-
-	c.Visit("https://old.reddit.com/r/AnimeThemes/wiki/anime_index#wiki_n")
-
-	return megainfo
-}
-
 func main() {
 	cfg, err := ini.Load("my.ini")
 	if err != nil {
@@ -213,6 +168,9 @@ func main() {
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
+	animeList := scraper.GetAnimeList()
+
+	log.Println("Loaded", len(animeList), "anime")
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 5
 
@@ -233,7 +191,7 @@ func main() {
 				resp, _ := http.Get(url)
 				body, _ := ioutil.ReadAll(resp.Body)
 
-				var query []Dict
+				var query []dict
 
 				json.Unmarshal([]byte(body), &query)
 
@@ -264,7 +222,7 @@ func main() {
 				resp, _ := http.Get(url)
 				body, _ := ioutil.ReadAll(resp.Body)
 
-				var query []Dict
+				var query []dict
 
 				json.Unmarshal([]byte(body), &query)
 
@@ -348,13 +306,16 @@ func main() {
 				}
 			} else if splittedText[0] == "theme" && len(splittedText) >= 2 {
 				query := strings.Join(splittedText[1:], " ")
-				if len(query) == 5 {
-					biArray := scraper(query)
-
-					for i := 0; i < len(biArray) && i < 50; i++ {
-						esempio := tgbotapi.NewInlineQueryResultArticleHTML("theme"+strconv.Itoa(i), biArray[i][0], biArray[i][0]+"\n"+"<a href='"+biArray[i][2]+"'>"+biArray[i][1]+"</a>")
-						esempio.Description = biArray[i][1]
-						array = append(array, esempio)
+				if len(query) >= 3 {
+					lista := animeList.SelectByBothNames(query)
+					count := 0
+					for i := 0; i < len(lista) && count < 50; i++ {
+						for j := 0; j < len(lista[i].Songs) && count < 50; j++ {
+							esempio := tgbotapi.NewInlineQueryResultArticleHTML("anime"+strconv.Itoa(i)+"id"+strconv.Itoa(j), lista[i].NameJap, lista[i].NameJap+"\n"+lista[i].NameEng+"\n"+"<a href='"+lista[i].Songs[j].Link+"'>"+lista[i].Songs[j].Title+"</a>")
+							esempio.Description = lista[i].NameEng + " - " + lista[i].Songs[j].Title
+							array = append(array, esempio)
+							count++
+						}
 					}
 
 					if len(array) == 0 {
@@ -369,13 +330,13 @@ func main() {
 					UserID: update.InlineQuery.From.ID,
 				}
 				foto, _ := bot.GetUserProfilePhotos(conf)
-				page := 0;
+				page := 0
 				if len(splittedText) == 2 {
-					if num, err := strconv.Atoi(splittedText[1]); err == nil && int(len(foto.Photos)/50) > (num-1){
+					if num, err := strconv.Atoi(splittedText[1]); err == nil && int(len(foto.Photos)/50) > (num-1) {
 						page = num - 1
 					}
 				}
-				for i := page*50; i < len(foto.Photos); i++ {
+				for i := page * 50; i < len(foto.Photos); i++ {
 					if i < (page+1)*50 {
 						a := tgbotapi.NewInlineQueryResultPhotoWithThumb("pic"+strconv.Itoa(i), foto.Photos[i][2].FileID, foto.Photos[i][2].FileID)
 						a.Caption = "La tua pic numero " + strconv.Itoa(i+1)
