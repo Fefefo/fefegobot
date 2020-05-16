@@ -311,8 +311,8 @@ func main() {
 					count := 0
 					for i := 0; i < len(lista) && count < 50; i++ {
 						for j := 0; j < len(lista[i].Songs) && count < 50; j++ {
-							esempio := tgbotapi.NewInlineQueryResultArticleHTML("anime"+strconv.Itoa(i)+"id"+strconv.Itoa(j), lista[i].NameJap, lista[i].NameJap+"\n"+lista[i].NameEng+"\n"+"<a href='"+lista[i].Songs[j].Link+"'>"+lista[i].Songs[j].Title+"</a>")
-							esempio.Description = lista[i].NameEng + " - " + lista[i].Songs[j].Title
+							esempio := tgbotapi.NewInlineQueryResultArticleHTML("animesong"+strconv.Itoa(i)+"id"+strconv.Itoa(j), lista[i].NameJap, lista[i].NameJap+"\n"+lista[i].NameEng+"\n"+"<a href='"+lista[i].Songs[j].Link+"'>"+lista[i].Songs[j].Version + " - " + lista[i].Songs[j].Title+"</a>")
+							esempio.Description = strings.Split(lista[i].NameEng, ",")[0] + " - " + lista[i].Songs[j].Version + " - " + lista[i].Songs[j].Title
 							array = append(array, esempio)
 							count++
 						}
