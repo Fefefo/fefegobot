@@ -177,7 +177,6 @@ func main() {
 	updates, err := bot.GetUpdatesChan(u)
 
 	for update := range updates {
-
 		if update.InlineQuery != nil {
 
 			rand.Seed(time.Now().UTC().UnixNano())
@@ -197,17 +196,19 @@ func main() {
 
 				if len(query) != 0 {
 					i := 0
-					for tipo, means := range query[0].Meaning {
-						//log.Println("Tipo:", tipo)
-						for _, def := range means {
-							text := "*Parola ricercata:* `" + splittedText[1] + "`\n" +
-								"*Divisione in sillabe:* `" + query[0].Phonetic + "`\n" +
-								"*Significato:*\n" +
-								"`" + def.Definition + "`"
-							articolo := tgbotapi.NewInlineQueryResultArticleMarkdown("significato"+fmt.Sprintf("%d", i), splittedText[1], text)
-							articolo.Description = tipo
-							array = append(array, articolo)
-							i++
+					for j := range query {
+						for tipo, means := range query[j].Meaning {
+							//log.Println("Tipo:", tipo)
+							for _, def := range means {
+								text := "*Parola ricercata:* `" + query[j].Word + "`\n" +
+									"*Divisione in sillabe:* `" + query[j].Phonetic + "`\n" +
+									"*Significato:*\n" +
+									"`" + def.Definition + "`"
+								articolo := tgbotapi.NewInlineQueryResultArticleMarkdown("significato"+fmt.Sprintf("%d", i), splittedText[1], text)
+								articolo.Description = tipo
+								array = append(array, articolo)
+								i++
+							}
 						}
 					}
 				}
