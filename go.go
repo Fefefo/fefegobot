@@ -204,7 +204,7 @@ func main() {
 									"*Divisione in sillabe:* `" + query[j].Phonetic + "`\n" +
 									"*Significato:*\n" +
 									"`" + def.Definition + "`"
-								articolo := tgbotapi.NewInlineQueryResultArticleMarkdown("significato"+fmt.Sprintf("%d", i), splittedText[1], text)
+								articolo := tgbotapi.NewInlineQueryResultArticleMarkdown("significato"+fmt.Sprintf("%d", i), query[j].Word, text)
 								articolo.Description = tipo
 								array = append(array, articolo)
 								i++
