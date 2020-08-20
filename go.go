@@ -31,6 +31,8 @@ import (
 	} `json:"meaning,omitempty"`
 }*/
 
+var bot *tgbotapi.BotAPI
+
 type dict struct {
 	Word     string                  `json:"word,omitempty"`
 	Phonetic string                  `json:"phonetic,omitempty"`
@@ -129,6 +131,17 @@ func solver(mate string) string {
 	}
 }
 
+func getAnimeList() scraper.List{
+	animeList := scraper.GetAnimeList()
+	files := 0
+	for i := 0; i < len(animeList); i++ {
+		files += len(animeList[i].Songs)
+	}
+	msg := tgbotapi.NewMessage(146519367, fmt.Sprintf("Loaded %d anime (%d files)", len(animeList), files))
+	bot.Send(msg)
+	return animeList
+}
+
 func main() {
 	cfg, err := ini.Load("my.ini")
 	if err != nil {
@@ -138,8 +151,9 @@ func main() {
 	tgapi := cfg.Section("").Key("tgbot_api").String()
 	filmapi := cfg.Section("").Key("film_api").String()
 	catapi := cfg.Section("").Key("cat_api").String()
+	myid, _ := cfg.Section("").Key("my_id").Int()
 
-	bot, err := tgbotapi.NewBotAPI(tgapi)
+	bot, err = tgbotapi.NewBotAPI(tgapi)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -164,11 +178,13 @@ func main() {
 		"	*es.* `@fefegobot theme evang`\n\n\n" +
 		"*È inoltre possibile mandare le proprie foto del profilo scrivendo :*\n" +
 		"`@fefegobot mypics`\n\n" +
+		"*e il proprio id :*\n" +
+		"`@fefegobot myid`\n\n" +
 		"_Bot online da_ `"
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
-	animeList := scraper.GetAnimeList()
+	animeList := getAnimeList()
 
 	log.Println("Loaded", len(animeList), "anime")
 	u := tgbotapi.NewUpdate(0)
@@ -344,6 +360,13 @@ func main() {
 						array = append(array, a)
 					}
 				}
+			} else if splittedText[0] == "myid" {
+				a := tgbotapi.NewInlineQueryResultArticleMarkdown("id", update.InlineQuery.From.FirstName + " ID", update.InlineQuery.From.FirstName + " id = `" +strconv.Itoa(update.InlineQuery.From.ID)+"`")
+				a.Description = strconv.Itoa(update.InlineQuery.From.ID)
+				
+				array = append(array, a)
+			} else if splittedText[0] == "relThemes" && update.InlineQuery.From.ID == myid {
+				animeList = getAnimeList()
 			} else {
 				stats := tgbotapi.NewInlineQueryResultArticleMarkdown("help", "HELP", helpText+getTime(startTime)+"`")
 				stats.Description = "Comandi aggiuntivi e tempo online"
