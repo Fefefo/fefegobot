@@ -2,7 +2,7 @@
 
 A simple telegram bot writed in go
 
-[@Fefegobot](t.me/fefegobot)
+[@Fefegobot](https://t.me/fefegobot)
 
 
 ## Dependencies
