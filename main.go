@@ -20,18 +20,17 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-/*type dizionario []struct {
-	Word     string `json:"word,omitempty"`
-	Phonetic string `json:"phonetic,omitempty"`
-	Origin   string `json:"origin,omitempty"`
-	Meaning  map[string][]struct {
-		Definition string   `json:"definition,omitempty"`
-		Example    string   `json:"example,omitempty"`
-		Synonyms   []string `json:"synonym,omitempty"`
-	} `json:"meaning,omitempty"`
-}*/
-
+var tgapi, filmapi, catapi, transapi string
 var bot *tgbotapi.BotAPI
+
+type transBody struct {
+	Translations []translations `json:"translations,omitempty"`
+}
+
+type translations struct {
+	Text string `json:"text,omitempty"`
+	To   string `json:"to,omitempty"`
+}
 
 type dict struct {
 	Word     string                  `json:"word,omitempty"`
@@ -61,6 +60,62 @@ type film struct {
 		Title       string `json:"title"`
 		Overview    string `json:"overview"`
 	}
+}
+
+type urbanResponse struct {
+	List []struct {
+		Def         string        `json:"definition"`
+		Permalink   string        `json:"permalink"`
+		ThumbsUp    int           `json:"thumbs_up"`
+		SoundUrls   []interface{} `json:"sound_urls"`
+		Author      string        `json:"author"`
+		Word        string        `json:"word"`
+		Defid       int           `json:"defid"`
+		CurrentVote string        `json:"current_vote"`
+		WrittenOn   time.Time     `json:"written_on"`
+		Example     string        `json:"example"`
+		ThumbsDown  int           `json:"thumbs_down"`
+	} `json:"list"`
+}
+
+func getUrb(query string) urbanResponse {
+	link := "http://api.urbandictionary.com/v0/define?term=" + url.PathEscape(query)
+	fmt.Println(link)
+
+	req, _ := http.Get(link)
+
+	body, _ := ioutil.ReadAll(req.Body)
+
+	var res urbanResponse
+	json.Unmarshal(body, &res)
+	return res
+}
+
+func translate(text, to string) string {
+	link := "https://microsoft-translator-text.p.rapidapi.com/translate?profanityAction=NoAction&textType=plain&api-version=3.0&to=" + url.PathEscape(to)
+
+	txt := strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(text, "\r", ""), "\n", ""), "\\", "/"), "\"", "'")
+	reqText := strings.NewReader(`[{"Text": "` + txt + `" }]`)
+
+	req, _ := http.NewRequest("POST", link, reqText)
+
+	req.Header.Add("x-rapidapi-host", "microsoft-translator-text.p.rapidapi.com")
+	req.Header.Add("x-rapidapi-key", transapi)
+	req.Header.Add("content-type", "application/json")
+
+	client, _ := http.DefaultClient.Do(req)
+	body, _ := ioutil.ReadAll(client.Body)
+	var res []transBody
+	json.Unmarshal(body, &res)
+	fmt.Println(client)
+	fmt.Println(string(body))
+	var out string
+	if len(res) > 0 {
+		out = res[0].Translations[0].Text
+	} else {
+		out = "Errore, utilizza la giusta sintassi del comando `.transto [lingua]` utilizzando il codice ISO della lingua in cui vuoi tradurre il messaggio (es: `it, en, es`)"
+	}
+	return out + "."
 }
 
 func getGatto(api string) string {
@@ -131,7 +186,7 @@ func solver(mate string) string {
 	}
 }
 
-func getAnimeList() scraper.List{
+func getAnimeList() scraper.List {
 	animeList := scraper.GetAnimeList()
 	files := 0
 	for i := 0; i < len(animeList); i++ {
@@ -148,9 +203,10 @@ func main() {
 		fmt.Printf("Fail to read file: %v", err)
 	}
 
-	tgapi := cfg.Section("").Key("tgbot_api").String()
-	filmapi := cfg.Section("").Key("film_api").String()
-	catapi := cfg.Section("").Key("cat_api").String()
+	tgapi = cfg.Section("").Key("tgbot_api").String()
+	filmapi = cfg.Section("").Key("film_api").String()
+	catapi = cfg.Section("").Key("cat_api").String()
+	transapi = cfg.Section("").Key("translate_api").String()
 	myid, _ := cfg.Section("").Key("my_id").Int()
 
 	bot, err = tgbotapi.NewBotAPI(tgapi)
@@ -328,7 +384,7 @@ func main() {
 					count := 0
 					for i := 0; i < len(lista) && count < 50; i++ {
 						for j := 0; j < len(lista[i].Songs) && count < 50; j++ {
-							esempio := tgbotapi.NewInlineQueryResultArticleHTML("animesong"+strconv.Itoa(i)+"id"+strconv.Itoa(j), lista[i].NameJap, lista[i].NameJap+"\n"+lista[i].NameEng+"\n"+"<a href='"+lista[i].Songs[j].Link+"'>"+lista[i].Songs[j].Version + " - " + lista[i].Songs[j].Title+"</a>")
+							esempio := tgbotapi.NewInlineQueryResultArticleHTML("animesong"+strconv.Itoa(i)+"id"+strconv.Itoa(j), lista[i].NameJap, lista[i].NameJap+"\n"+lista[i].NameEng+"\n"+"<a href='"+lista[i].Songs[j].Link+"'>"+lista[i].Songs[j].Version+" - "+lista[i].Songs[j].Title+"</a>")
 							esempio.Description = strings.Split(lista[i].NameEng, ",")[0] + " - " + lista[i].Songs[j].Version + " - " + lista[i].Songs[j].Title
 							array = append(array, esempio)
 							count++
@@ -360,10 +416,22 @@ func main() {
 						array = append(array, a)
 					}
 				}
+			} else if splittedText[0] == "urban" {
+				if len(splittedText) > 1 {
+					query := strings.Join(splittedText[1:], " ")
+					if strings.HasSuffix(query, ".") {
+						urb := getUrb(strings.ReplaceAll(query, ".", ""))
+						for i := 0; i < len(urb.List); i++ {
+							a := tgbotapi.NewInlineQueryResultArticleHTML("urban"+strconv.Itoa(i), urb.List[i].Word, "Title: <a href='"+urb.List[i].Permalink+"'>"+urb.List[i].Word+"</a>\n\n"+urb.List[i].Def+"\n\nAuthor: "+urb.List[i].Author)
+							a.Description = urb.List[i].Author
+							array = append(array, a)
+						}
+					}
+				}
 			} else if splittedText[0] == "myid" {
-				a := tgbotapi.NewInlineQueryResultArticleMarkdown("id", update.InlineQuery.From.FirstName + " ID", update.InlineQuery.From.FirstName + " id = `" +strconv.Itoa(update.InlineQuery.From.ID)+"`")
+				a := tgbotapi.NewInlineQueryResultArticleMarkdown("id", update.InlineQuery.From.FirstName+" ID", update.InlineQuery.From.FirstName+" id = `"+strconv.Itoa(update.InlineQuery.From.ID)+"`")
 				a.Description = strconv.Itoa(update.InlineQuery.From.ID)
-				
+
 				array = append(array, a)
 			} else if splittedText[0] == "relThemes" && update.InlineQuery.From.ID == myid {
 				animeList = getAnimeList()
@@ -401,6 +469,14 @@ func main() {
 				log.Println(err)
 			}
 			bot.AnswerInlineQuery(risposta)
+		} else if update.Message != nil {
+			if strings.HasPrefix(update.Message.Text, ".transto") && update.Message.ReplyToMessage != nil {
+				to := strings.TrimSpace(strings.Replace(update.Message.Text, ".transto", "", 1))
+				out := translate(update.Message.ReplyToMessage.Text, to)
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, out)
+				msg.ReplyToMessageID = update.Message.ReplyToMessage.MessageID
+				bot.Send(msg)
+			}
 		}
 	}
 }
