@@ -422,7 +422,8 @@ func main() {
 					if strings.HasSuffix(query, ".") {
 						urb := getUrb(strings.ReplaceAll(query, ".", ""))
 						for i := 0; i < len(urb.List); i++ {
-							a := tgbotapi.NewInlineQueryResultArticleHTML("urban"+strconv.Itoa(i), urb.List[i].Word, "Title: <a href='"+urb.List[i].Permalink+"'>"+urb.List[i].Word+"</a>\n\n"+strings.ReplaceAll(strings.ReplaceAll(urb.List[i].Def, "[", ""), "]", "")+"\n\nAuthor: "+urb.List[i].Author)
+							//a := tgbotapi.NewInlineQueryResultArticleHTML("urban"+strconv.Itoa(i), urb.List[i].Word, "Title: <a href='"+urb.List[i].Permalink+"'>"+urb.List[i].Word+"</a>\n\n"+strings.ReplaceAll(strings.ReplaceAll(urb.List[i].Def, "[", ""), "]", "")+"\n\nAuthor: "+urb.List[i].Author)
+							a := tgbotapi.NewInlineQueryResultArticle("urban"+strconv.Itoa(i), urb.List[i].Word, "Title: "+urb.List[i].Word+"\n\n"+strings.ReplaceAll(strings.ReplaceAll(urb.List[i].Def, "[", ""), "]", "")+"\n\nAuthor: "+urb.List[i].Author)
 							a.Description = urb.List[i].Author
 							array = append(array, a)
 						}
