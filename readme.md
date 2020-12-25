@@ -1,6 +1,6 @@
 ## Fefegobot
 
-A simple telegram bot writed in go
+A simple telegram bot written in go
 
 [@Fefegobot](https://t.me/fefegobot)
 
