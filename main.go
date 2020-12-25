@@ -82,8 +82,8 @@ type redditResponse struct {
 	Data struct {
 		Children []struct {
 			Data struct {
-				File      string `json:"url_overridden_by_dest"`
-				Thumbnail string `json:"thumbnail"`
+				File string `json:"url_overridden_by_dest"`
+				//Thumbnail string `json:"thumbnail"`
 				Title     string `json:"title"`
 				Subreddit string `json:"subreddit_name_prefixed"`
 			} `json:"data"`
@@ -141,7 +141,7 @@ func getReddit(query string) []redditResponse {
 	}
 
 	err = json.Unmarshal(body, &res)
-	if err != nil {
+	if err != nil || len(res) == 0 || len(res[0].Data.Children) == 0 {
 		return nil
 	}
 
@@ -498,7 +498,7 @@ func main() {
 					msg.FileID = img[0].Data.Children[0].Data.File
 					msg.UseExisting = true
 					msg.ParseMode = tgbotapi.ModeHTML
-					msg.Caption = "<a href='" + query + "'>Sauce</a>"
+					msg.Caption = "<a href='" + query + "'>Sauce</a>\nby@" + update.InlineQuery.From.UserName
 					m, err := bot.Send(msg)
 
 					if err == nil {
