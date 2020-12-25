@@ -288,6 +288,8 @@ func main() {
 		"	*es.* `@fefegobot math 5+6*7-2/(5-77)`\n\n" +
 		"`neko:` verrà cercata una foto di un gatto con le risoluzioni inserite\n" +
 		"	*es.* `@fefegobot neko 1920 1080`\n\n" +
+		"`reddimg:` verrà mandata la foto di un post reddit\n" +
+		"	*es.* `@fefegobot reddimg https://www.reddit.com/r/CatsAreAssholes/comments/kj6a90/we_dont_need_a_christmass_tree_topper_this_year/`\n\n" +
 		"`theme:` verranno cercate tutte le opening e ending di anime che contengono i 5 caratteri inseriti nel nome\n" +
 		"	*es.* `@fefegobot theme evang`\n\n\n" +
 		"*È inoltre possibile mandare le proprie foto del profilo scrivendo :*\n" +
