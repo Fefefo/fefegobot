@@ -20,4 +20,5 @@ tgbot_api = "string"
 film_api = "string"
 cat_api = "string"
 my_id = int
+channel_id = long (int64)
 ```
