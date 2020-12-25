@@ -104,7 +104,6 @@ func getUrb(query string) urbanResponse {
 }
 
 func getReddit(query string) []redditResponse {
-
 	if strings.HasPrefix(query, "www") {
 		query = "https://" + query
 	}
@@ -493,23 +492,29 @@ func main() {
 				if len(splittedText) == 2 {
 					query := splittedText[1]
 					img := getReddit(query)
+					if img != nil {
+						msg := tgbotapi.NewDocumentUpload(channelid, nil)
+						msg.FileID = img[0].Data.Children[0].Data.File
+						msg.UseExisting = true
+						msg.ParseMode = tgbotapi.ModeHTML
+						msg.Caption = "<a href='" + query + "'>Sauce</a>\nby@" + update.InlineQuery.From.UserName
+						m, err := bot.Send(msg)
 
-					msg := tgbotapi.NewDocumentUpload(channelid, nil)
-					msg.FileID = img[0].Data.Children[0].Data.File
-					msg.UseExisting = true
-					msg.ParseMode = tgbotapi.ModeHTML
-					msg.Caption = "<a href='" + query + "'>Sauce</a>\nby@" + update.InlineQuery.From.UserName
-					m, err := bot.Send(msg)
-
-					if err == nil {
-						a := tgbotapi.NewInlineQueryResultCachedDocument("img", m.Document.FileID, img[0].Data.Children[0].Data.Title)
-						a.Caption = img[0].Data.Children[0].Data.Title + "\n<a href='" + query + "'>Sauce</a> from <a href='reddit.com/" + img[0].Data.Children[0].Data.Subreddit + "'>" + img[0].Data.Children[0].Data.Subreddit + "</a>"
-						a.ParseMode = tgbotapi.ModeHTML
-						array = append(array, a)
+						if err == nil {
+							a := tgbotapi.NewInlineQueryResultCachedDocument("img", m.Document.FileID, img[0].Data.Children[0].Data.Title)
+							a.Caption = img[0].Data.Children[0].Data.Title + "\n<a href='" + query + "'>Sauce</a> from <a href='reddit.com/" + img[0].Data.Children[0].Data.Subreddit + "'>" + img[0].Data.Children[0].Data.Subreddit + "</a>"
+							a.ParseMode = tgbotapi.ModeHTML
+							array = append(array, a)
+						} else {
+							a := tgbotapi.NewInlineQueryResultArticleHTML("sad", img[0].Data.Children[0].Data.Title, "Link al <a href='"+query+"'>POST</a>\nLink all'<a href='"+img[0].Data.Children[0].Data.File+"'>IMMAGINE</a>")
+							a.Description = "File probabilmente troppo grande, puoi comunque mandare il link cliccando qui"
+							array = append(array, a)
+						}
 					} else {
-						a := tgbotapi.NewInlineQueryResultArticleHTML("sad", img[0].Data.Children[0].Data.Title, "Link al <a href='"+query+"'>POST</a>\nLink all'<a href='"+img[0].Data.Children[0].Data.File+"'>IMMAGINE</a>")
-						a.Description = "Immagine probabilmente troppo grande, puoi comunque mandare il link cliccando qui"
-						array = append(array, a)
+						articolo := tgbotapi.NewInlineQueryResultPhotoWithThumb("404", "https://http.cat/404", "https://http.cat/404")
+						articolo.Caption = "Hai mandato un link sbagliato"
+						articolo.Description = "NOPE"
+						array = append(array, articolo)
 					}
 				}
 			} else if splittedText[0] == "myid" {
