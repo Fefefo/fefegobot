@@ -78,9 +78,21 @@ type urbanResponse struct {
 	} `json:"list"`
 }
 
+type redditResponse struct {
+	Data struct {
+		Children []struct {
+			Data struct {
+				File      string `json:"url_overridden_by_dest"`
+				Thumbnail string `json:"thumbnail"`
+				Title     string `json:"title"`
+				Subreddit string `json:"subreddit_name_prefixed"`
+			} `json:"data"`
+		} `json:"children"`
+	} `json:"data"`
+}
+
 func getUrb(query string) urbanResponse {
 	link := "http://api.urbandictionary.com/v0/define?term=" + url.PathEscape(query)
-	fmt.Println(link)
 
 	req, _ := http.Get(link)
 
@@ -88,6 +100,51 @@ func getUrb(query string) urbanResponse {
 
 	var res urbanResponse
 	json.Unmarshal(body, &res)
+	return res
+}
+
+func getReddit(query string) []redditResponse {
+
+	if strings.HasPrefix(query, "www") {
+		query = "https://" + query
+	}
+
+	if !strings.HasPrefix(query, "https://www.reddit.com/r/") && !strings.HasPrefix(query, "http://www.reddit.com/r/") {
+		return nil
+	}
+
+	client := &http.Client{}
+	var res []redditResponse
+
+	splitted := strings.Split(query, "/")
+	if len(splitted) < 8 {
+		return nil
+	}
+
+	query = strings.Join(splitted[:8], "/")
+	query += ".json"
+
+	req, err := http.NewRequest("GET", query, nil)
+	req.Header.Set("User-Agent", "Golang_FefegoBot")
+	if err != nil {
+		return nil
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if fmt.Sprintf("%s", body) == "[]" || err != nil {
+		return nil
+	}
+
+	err = json.Unmarshal(body, &res)
+	if err != nil {
+		return nil
+	}
+
 	return res
 }
 
@@ -208,6 +265,7 @@ func main() {
 	catapi = cfg.Section("").Key("cat_api").String()
 	transapi = cfg.Section("").Key("translate_api").String()
 	myid, _ := cfg.Section("").Key("my_id").Int()
+	channelid, _ := cfg.Section("").Key("channel_id").Int64()
 
 	bot, err = tgbotapi.NewBotAPI(tgapi)
 	if err != nil {
@@ -416,7 +474,7 @@ func main() {
 						array = append(array, a)
 					}
 				}
-			} else if splittedText[0] == "urban" {
+			} else if splittedText[0] == "urban" && update.InlineQuery.From.ID == myid {
 				if len(splittedText) > 1 {
 					query := strings.Join(splittedText[1:], " ")
 					if strings.HasSuffix(query, ".") {
@@ -427,6 +485,29 @@ func main() {
 							a.Description = urb.List[i].Author
 							array = append(array, a)
 						}
+					}
+				}
+			} else if splittedText[0] == "reddimg" {
+				if len(splittedText) == 2 {
+					query := splittedText[1]
+					img := getReddit(query)
+
+					msg := tgbotapi.NewDocumentUpload(channelid, nil)
+					msg.FileID = img[0].Data.Children[0].Data.File
+					msg.UseExisting = true
+					msg.ParseMode = tgbotapi.ModeHTML
+					msg.Caption = "<a href='" + query + "'>Sauce</a>"
+					m, err := bot.Send(msg)
+
+					if err == nil {
+						a := tgbotapi.NewInlineQueryResultCachedDocument("img", m.Document.FileID, img[0].Data.Children[0].Data.Title)
+						a.Caption = img[0].Data.Children[0].Data.Title + "\n<a href='" + query + "'>Sauce</a> from <a href='reddit.com/" + img[0].Data.Children[0].Data.Subreddit + "'>" + img[0].Data.Children[0].Data.Subreddit + "</a>"
+						a.ParseMode = tgbotapi.ModeHTML
+						array = append(array, a)
+					} else {
+						a := tgbotapi.NewInlineQueryResultArticleHTML("sad", img[0].Data.Children[0].Data.Title, "Link al <a href='"+query+"'>POST</a>\nLink all'<a href='"+img[0].Data.Children[0].Data.File+"'>IMMAGINE</a>")
+						a.Description = "Immagine probabilmente troppo grande, puoi comunque mandare il link cliccando qui"
+						array = append(array, a)
 					}
 				}
 			} else if splittedText[0] == "myid" {
