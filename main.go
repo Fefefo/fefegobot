@@ -174,7 +174,7 @@ func translate(text, to string) string {
 	return out + "."
 }
 
-func getGatto(api string) string {
+func getCat(api string) string {
 	resp, _ := http.Get("https://api.thecatapi.com/v1/images/search?api_key=" + api)
 	body, _ := ioutil.ReadAll(resp.Body)
 	var gattino []gattoLink
@@ -182,7 +182,7 @@ func getGatto(api string) string {
 	return gattino[0].Link
 }
 
-func getCane() (string, string) {
+func getDog() (string, string) {
 	respC, _ := http.Get("https://dog.ceo/api/breeds/image/random")
 	bodyC, _ := ioutil.ReadAll(respC.Body)
 	var cagnolino caneLink
@@ -289,6 +289,8 @@ func main() {
 		"	*es.* `@fefegobot neko 1920 1080`\n\n" +
 		"`reddimg:` verrà mandata la foto di un post reddit\n" +
 		"	*es.* `@fefegobot reddimg https://www.reddit.com/r/CatsAreAssholes/comments/kj6a90/we_dont_need_a_christmass_tree_topper_this_year/`\n\n" +
+		"`reddifile:` verrà mandata il file di un post reddit (non compresso)\n" +
+		"	*es.* `@fefegobot reddfile https://www.reddit.com/r/CatsAreAssholes/comments/kj6a90/we_dont_need_a_christmass_tree_topper_this_year/`\n\n" +
 		"`theme:` verranno cercate tutte le opening e ending di anime che contengono i 5 caratteri inseriti nel nome\n" +
 		"	*es.* `@fefegobot theme evang`\n\n\n" +
 		"*È inoltre possibile mandare le proprie foto del profilo scrivendo :*\n" +
@@ -493,6 +495,35 @@ func main() {
 					query := splittedText[1]
 					img := getReddit(query)
 					if img != nil {
+						msg := tgbotapi.NewPhotoUpload(channelid, nil)
+						msg.FileID = img[0].Data.Children[0].Data.File
+						msg.UseExisting = true
+						msg.ParseMode = tgbotapi.ModeHTML
+						msg.Caption = "<a href='" + query + "'>Sauce</a>\nby@" + update.InlineQuery.From.UserName
+						m, err := bot.Send(msg)
+
+						if err == nil {
+							a := tgbotapi.NewInlineQueryResultCachedPhoto("img", (*m.Photo)[0].FileID)
+							a.Caption = img[0].Data.Children[0].Data.Title + "\n<a href='" + query + "'>Sauce</a> from <a href='reddit.com/" + img[0].Data.Children[0].Data.Subreddit + "'>" + img[0].Data.Children[0].Data.Subreddit + "</a>"
+							a.ParseMode = tgbotapi.ModeHTML
+							array = append(array, a)
+						} else {
+							a := tgbotapi.NewInlineQueryResultArticleHTML("sad", img[0].Data.Children[0].Data.Title, "Link al <a href='"+query+"'>POST</a>\nLink all'<a href='"+img[0].Data.Children[0].Data.File+"'>IMMAGINE</a>")
+							a.Description = "Immagine probabilmente troppo grande o file di altro tipo, puoi comunque mandare il link cliccando qui"
+							array = append(array, a)
+						}
+					} else {
+						articolo := tgbotapi.NewInlineQueryResultPhotoWithThumb("404", "https://http.cat/404", "https://http.cat/404")
+						articolo.Caption = "Hai mandato un link sbagliato"
+						articolo.Description = "NOPE"
+						array = append(array, articolo)
+					}
+				}
+			} else if splittedText[0] == "reddifile" {
+				if len(splittedText) == 2 {
+					query := splittedText[1]
+					img := getReddit(query)
+					if img != nil {
 						msg := tgbotapi.NewDocumentUpload(channelid, nil)
 						msg.FileID = img[0].Data.Children[0].Data.File
 						msg.UseExisting = true
@@ -506,7 +537,7 @@ func main() {
 							a.ParseMode = tgbotapi.ModeHTML
 							array = append(array, a)
 						} else {
-							a := tgbotapi.NewInlineQueryResultArticleHTML("sad", img[0].Data.Children[0].Data.Title, "Link al <a href='"+query+"'>POST</a>\nLink all'<a href='"+img[0].Data.Children[0].Data.File+"'>IMMAGINE</a>")
+							a := tgbotapi.NewInlineQueryResultArticleHTML("sad", img[0].Data.Children[0].Data.Title, "Link al <a href='"+query+"'>POST</a>\nLink al <a href='"+img[0].Data.Children[0].Data.File+"'>FILE</a>")
 							a.Description = "File probabilmente troppo grande, puoi comunque mandare il link cliccando qui"
 							array = append(array, a)
 						}
@@ -533,11 +564,11 @@ func main() {
 				ping.Description = "Latenza? O FORSE NO"
 				ping.ThumbURL = "https://www.dictionary.com/e/wp-content/uploads/2018/03/eyes-1.jpg"
 
-				gatto := tgbotapi.NewInlineQueryResultPhotoWithThumb("neko", getGatto(catapi), "http://image.thepaper.cn/www/image/28/100/499.jpg")
+				gatto := tgbotapi.NewInlineQueryResultPhotoWithThumb("neko", getCat(catapi), "http://image.thepaper.cn/www/image/28/100/499.jpg")
 				gatto.Description = "Neko 猫"
 				gatto.Caption = "Neko 猫"
 
-				caneLink, caneCaption := getCane()
+				caneLink, caneCaption := getDog()
 				cane := tgbotapi.NewInlineQueryResultPhotoWithThumb("inu", caneLink, "https://dog.ceo/img/dog-api-logo.svg")
 				cane.Description = "Inu 犬"
 				cane.Caption = caneCaption
