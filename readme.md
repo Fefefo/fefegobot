@@ -11,6 +11,7 @@ A simple telegram bot written in go
 - [govaluate](https://github.com/Knetic/govaluate)
 - [telegram-bot-api](https://github.com/go-telegram-bot-api/telegram-bot-api)
 - [ini](https://github.com/go-ini/ini/tree/v1.60.0)
+- [coc-wrapper](https://github.com/fefefo/coc-wrapper)
 
 
 ## Ini
@@ -21,4 +22,5 @@ film_api = "string"
 cat_api = "string"
 my_id = int
 channel_id = long (int64)
+coc_api = "string"
 ```
