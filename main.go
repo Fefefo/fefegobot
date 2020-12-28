@@ -13,15 +13,13 @@ import (
 	"strings"
 	"time"
 
+	cocwrapper "github.com/Fefefo/coc-wrapper"
 	"github.com/Fefefo/moeScraper/scraper"
 
 	"github.com/Knetic/govaluate"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"gopkg.in/ini.v1"
 )
-
-var tgapi, filmapi, catapi, transapi string
-var bot *tgbotapi.BotAPI
 
 type transBody struct {
 	Translations []translations `json:"translations,omitempty"`
@@ -90,6 +88,9 @@ type redditResponse struct {
 		} `json:"children"`
 	} `json:"data"`
 }
+
+var tgapi, filmapi, catapi, transapi, cocapi string
+var bot *tgbotapi.BotAPI
 
 func getUrb(query string) urbanResponse {
 	link := "http://api.urbandictionary.com/v0/define?term=" + url.PathEscape(query)
@@ -265,6 +266,7 @@ func main() {
 	transapi = cfg.Section("").Key("translate_api").String()
 	myid, _ := cfg.Section("").Key("my_id").Int()
 	channelid, _ := cfg.Section("").Key("channel_id").Int64()
+	cocapi = cfg.Section("").Key("coc_api").String()
 
 	bot, err = tgbotapi.NewBotAPI(tgapi)
 	if err != nil {
@@ -302,6 +304,7 @@ func main() {
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
 	animeList := getAnimeList()
+	cocwrapper.SetAPIToken(cocapi)
 
 	log.Println("Loaded", len(animeList), "anime")
 	u := tgbotapi.NewUpdate(0)
@@ -544,6 +547,26 @@ func main() {
 					} else {
 						articolo := tgbotapi.NewInlineQueryResultPhotoWithThumb("404", "https://http.cat/404", "https://http.cat/404")
 						articolo.Caption = "Hai mandato un link sbagliato"
+						articolo.Description = "NOPE"
+						array = append(array, articolo)
+					}
+				}
+			} else if splittedText[0] == "cocclan" {
+				if len(splittedText) >= 2 {
+					var req cocwrapper.ReqClans
+					req.Name = strings.Join(splittedText[1:], " ")
+					fmt.Println(req.Name)
+					res := cocwrapper.GetClans(req)
+					if len(res.Clan) > 0 {
+						for i := 0; i < len(res.Clan) && i < 50; i++ {
+							a := tgbotapi.NewInlineQueryResultPhotoWithThumb("clan"+strconv.Itoa(i), res.Clan[i].Pic.Large, res.Clan[i].Pic.Small)
+							a.Caption = "*" + res.Clan[i].Name + "*       `" + res.Clan[i].Tag + "`\nMembri : `" + strconv.Itoa(res.Clan[i].Members) + "/50`       Trofei: `" + strconv.Itoa(res.Clan[i].Points) + "`\nGuerre Vinte: `" + strconv.Itoa(res.Clan[i].WarWins) + "`\nLega: `" + res.Clan[i].WarLeague.Name + "`\nLocalità: `" + res.Clan[i].Location.Name + "`"
+							a.ParseMode = tgbotapi.ModeMarkdown
+							array = append(array, a)
+						}
+					} else {
+						articolo := tgbotapi.NewInlineQueryResultPhotoWithThumb("404", "https://http.cat/404", "https://http.cat/404")
+						articolo.Caption = "Nessun clan trovato"
 						articolo.Description = "NOPE"
 						array = append(array, articolo)
 					}
