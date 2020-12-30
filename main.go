@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
+	scraper "github.com/Fefefo/anime-themes-scraper"
 	cocwrapper "github.com/Fefefo/coc-wrapper"
-	"github.com/Fefefo/moeScraper/scraper"
 
 	"github.com/Knetic/govaluate"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
