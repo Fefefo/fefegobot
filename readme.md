@@ -7,7 +7,7 @@ A simple telegram bot written in go
 
 ## Dependencies
 
-- [moeScraper](https://github.com/Fefefo/moeScraper)
+- [anime-themes-scraper](https://github.com/Fefefo/anime-themes-scraper)
 - [govaluate](https://github.com/Knetic/govaluate)
 - [telegram-bot-api](https://github.com/go-telegram-bot-api/telegram-bot-api)
 - [ini](https://github.com/go-ini/ini/tree/v1.60.0)
